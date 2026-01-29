@@ -69,12 +69,12 @@ class ZenohHub:
             endpoints = ", ".join(f'"{e}"' for e in self._settings.zenoh_connect)
             config.insert_json5("connect/endpoints", f"[{endpoints}]")
 
-        # Open session
-        self._session = await zenoh.open(config)
+        # Open session (zenoh.open is synchronous)
+        self._session = zenoh.open(config)
         self._running = True
 
         # Set up core subscriptions
-        await self._setup_subscriptions()
+        self._setup_subscriptions()
 
         logger.info("zenoh_hub_started", session_id=str(self._session.zid()))
 
@@ -97,7 +97,7 @@ class ZenohHub:
 
         logger.info("zenoh_hub_stopped")
 
-    async def _setup_subscriptions(self) -> None:
+    def _setup_subscriptions(self) -> None:
         """Set up core topic subscriptions."""
         if not self._session:
             return
@@ -105,30 +105,30 @@ class ZenohHub:
         prefix = self._settings.topic_prefix
 
         # Device info subscription
-        await self._subscribe(
+        self._subscribe(
             f"{prefix}/devices/*/info",
             self._handle_device_info,
         )
 
         # Heartbeat subscription
-        await self._subscribe(
+        self._subscribe(
             f"{prefix}/devices/*/heartbeat",
             self._handle_heartbeat,
         )
 
         # Sensor data subscription
-        await self._subscribe(
+        self._subscribe(
             f"{prefix}/sensors/**",
             self._handle_sensor_data,
         )
 
         # Command response subscription
-        await self._subscribe(
+        self._subscribe(
             f"{prefix}/commands/*/response",
             self._handle_command_response,
         )
 
-    async def _subscribe(self, topic: str, handler: MessageHandler) -> None:
+    def _subscribe(self, topic: str, handler: MessageHandler) -> None:
         """Subscribe to a topic with a handler.
 
         Args:
