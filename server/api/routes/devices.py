@@ -44,50 +44,6 @@ class DeviceDetailResponse(BaseModel):
     status: DeviceStatus
 
 
-class RegisterDeviceRequest(BaseModel):
-    """Request body for registering a device."""
-
-    device_id: str
-    name: str | None = None
-    device_type: str = "sensor_node"
-
-
-@router.post("", status_code=201)
-async def register_device(request: RegisterDeviceRequest) -> dict[str, str]:
-    """Register a device via HTTP (for testing)."""
-    from server.api.main import get_device_registry
-
-    from shared.schemas import DeviceInfo
-
-    registry = get_device_registry()
-
-    device_info = DeviceInfo(
-        device_id=request.device_id,
-        name=request.name or request.device_id,
-        device_type=request.device_type,
-    )
-
-    await registry.register_device(device_info)
-
-    return {"status": "registered", "device_id": request.device_id}
-
-
-@router.post("/{device_id}/heartbeat")
-async def device_heartbeat(device_id: str) -> dict[str, str]:
-    """Update device heartbeat (keeps device online)."""
-    from server.api.main import get_device_registry
-
-    registry = get_device_registry()
-
-    device = registry.get_device(device_id)
-    if not device:
-        raise HTTPException(status_code=404, detail=f"Device {device_id} not found")
-
-    await registry.update_heartbeat(device_id)
-
-    return {"status": "ok", "device_id": device_id}
-
-
 @router.get("", response_model=DeviceListResponse)
 async def list_devices() -> DeviceListResponse:
     """List all registered devices."""

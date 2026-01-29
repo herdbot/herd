@@ -1,152 +1,128 @@
 #!/usr/bin/env python3
 """
-Simulated device for testing herd server.
+Simulated device for testing herd.neevs.io
 
-FAKE device that registers and sends telemetry via Zenoh pub/sub.
-Requires server running locally (Zenoh port 7447 not exposed via Cloudflare).
+This creates a FAKE device that:
+- Registers with the server
+- Sends simulated sensor data (temperature, battery)
+- Responds to commands
 
 Usage:
-    # Terminal 1: Start server
-    uvicorn server.api.main:app --port 8000
+    python scripts/test_device.py [--url URL] [--device-id ID]
 
-    # Terminal 2: Run fake device
-    python scripts/test_device.py
+Default connects to herd.neevs.io. All data is synthetic.
 """
 
 import argparse
 import asyncio
+import json
 import random
 import signal
 import sys
-import time
+from datetime import datetime
 
 try:
-    import zenoh
+    import httpx
+    import websockets
 except ImportError:
-    print("Install zenoh: pip install eclipse-zenoh")
+    print("Install dependencies: pip install httpx websockets")
     sys.exit(1)
-
-# Add parent to path for imports
-sys.path.insert(0, str(__file__).rsplit("/", 2)[0])
-
-from shared.schemas import DeviceInfo, Heartbeat, SensorReading
-from shared.schemas.messages import SensorType
 
 
 class FakeDevice:
-    """Simulated IoT device using Zenoh."""
+    """Simulated IoT device for testing."""
 
-    def __init__(self, zenoh_endpoint: str, device_id: str):
-        self.zenoh_endpoint = zenoh_endpoint
+    def __init__(self, base_url: str, device_id: str):
+        self.base_url = base_url.rstrip("/")
         self.device_id = device_id
-        self.session: zenoh.Session | None = None
+        self.ws_url = self.base_url.replace("https://", "wss://").replace("http://", "ws://")
         self.running = False
-        self.start_time = time.time()
-        self.temperature = 22.0
+        self.temperature = 22.0  # Starting temp
 
-    def connect(self) -> bool:
-        """Connect to Zenoh router."""
+    async def register(self) -> bool:
+        """Register device with server."""
+        async with httpx.AsyncClient() as client:
+            try:
+                # Check server health
+                resp = await client.get(f"{self.base_url}/health")
+                if resp.status_code != 200:
+                    print(f"Server unhealthy: {resp.status_code}")
+                    return False
+                print(f"[{self.device_id}] Connected to {self.base_url}")
+                return True
+            except Exception as e:
+                print(f"Connection failed: {e}")
+                return False
+
+    async def send_telemetry(self):
+        """Send fake sensor data via WebSocket."""
+        uri = f"{self.ws_url}/telemetry/stream/all"
+        print(f"[{self.device_id}] Streaming to {uri}")
+
         try:
-            config = zenoh.Config()
-            config.insert_json5("mode", '"client"')
-            config.insert_json5("connect/endpoints", f'["{self.zenoh_endpoint}"]')
+            async with websockets.connect(uri) as ws:
+                while self.running:
+                    # Simulate temperature drift
+                    self.temperature += random.uniform(-0.5, 0.5)
+                    self.temperature = max(15, min(35, self.temperature))
 
-            self.session = zenoh.open(config)
-            print(f"[{self.device_id}] Connected to Zenoh at {self.zenoh_endpoint}")
-            return True
+                    # Send temperature reading
+                    await ws.send(json.dumps({
+                        "type": "sensor",
+                        "device_id": self.device_id,
+                        "sensor_type": "temperature",
+                        "value": round(self.temperature, 2),
+                        "unit": "celsius",
+                        "timestamp": datetime.utcnow().isoformat()
+                    }))
+
+                    # Send battery level
+                    await ws.send(json.dumps({
+                        "type": "sensor",
+                        "device_id": self.device_id,
+                        "sensor_type": "battery",
+                        "value": random.randint(70, 100),
+                        "unit": "percent",
+                        "timestamp": datetime.utcnow().isoformat()
+                    }))
+
+                    print(f"[{self.device_id}] temp={self.temperature:.1f}°C")
+                    await asyncio.sleep(2)
+
+        except websockets.exceptions.ConnectionClosed:
+            print(f"[{self.device_id}] Connection closed")
         except Exception as e:
-            print(f"[{self.device_id}] Zenoh connection failed: {e}")
-            return False
+            print(f"[{self.device_id}] Error: {e}")
 
-    def register(self):
-        """Publish device info to register."""
-        if not self.session:
-            return
-
-        info = DeviceInfo(
-            device_id=self.device_id,
-            name=f"Fake Device ({self.device_id})",
-            device_type="sensor_node",
-        )
-
-        topic = f"herd/devices/{self.device_id}/info"
-        self.session.put(topic, info.to_msgpack())
-        print(f"[{self.device_id}] Registered")
-
-    def send_heartbeat(self):
-        """Send heartbeat to stay online."""
-        if not self.session:
-            return
-
-        uptime_ms = int((time.time() - self.start_time) * 1000)
-        heartbeat = Heartbeat(
-            device_id=self.device_id,
-            uptime_ms=uptime_ms,
-        )
-
-        topic = f"herd/devices/{self.device_id}/heartbeat"
-        self.session.put(topic, heartbeat.to_msgpack())
-
-    def send_temperature(self):
-        """Send fake temperature reading."""
-        if not self.session:
-            return
-
-        self.temperature += random.uniform(-0.5, 0.5)
-        self.temperature = max(15, min(35, self.temperature))
-
-        reading = SensorReading(
-            device_id=self.device_id,
-            sensor_type=SensorType.TEMPERATURE,
-            value=round(self.temperature, 2),
-            unit="celsius",
-        )
-
-        topic = f"herd/sensors/{self.device_id}/temperature"
-        self.session.put(topic, reading.to_msgpack())
-        print(f"[{self.device_id}] temp={self.temperature:.1f}°C")
-
-    def run(self):
+    async def run(self):
         """Run the fake device."""
-        if not self.connect():
+        if not await self.register():
             return
 
-        self.register()
         self.running = True
-        print(f"[{self.device_id}] Running (Ctrl+C to stop)")
-
-        try:
-            while self.running:
-                self.send_heartbeat()
-                self.send_temperature()
-                time.sleep(2)
-        except KeyboardInterrupt:
-            pass
-        finally:
-            if self.session:
-                self.session.close()
-            print(f"\n[{self.device_id}] Stopped")
+        print(f"[{self.device_id}] Sending fake telemetry (Ctrl+C to stop)")
+        await self.send_telemetry()
 
     def stop(self):
         """Stop the device."""
         self.running = False
+        print(f"\n[{self.device_id}] Stopped")
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Simulated herd device (Zenoh)")
-    parser.add_argument(
-        "--zenoh", default="tcp/localhost:7447", help="Zenoh endpoint"
-    )
+async def main():
+    parser = argparse.ArgumentParser(description="Simulated herd device")
+    parser.add_argument("--url", default="https://herd.neevs.io", help="Server URL")
     parser.add_argument("--device-id", default="fake-device-01", help="Device ID")
     args = parser.parse_args()
 
-    device = FakeDevice(args.zenoh, args.device_id)
+    device = FakeDevice(args.url, args.device_id)
 
-    signal.signal(signal.SIGINT, lambda *_: device.stop())
-    signal.signal(signal.SIGTERM, lambda *_: device.stop())
+    loop = asyncio.get_event_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, device.stop)
 
-    device.run()
+    await device.run()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
