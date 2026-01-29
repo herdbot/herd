@@ -35,12 +35,10 @@ class TestHealthEndpoint:
         # In real tests, you'd mock the Zenoh hub
         assert response.status_code in [200, 500]
 
-    def test_root_endpoint(self, client):
-        response = client.get("/")
-        assert response.status_code == 200
-        data = response.json()
-        assert "name" in data
-        assert data["name"] == "Herdbot API"
+    def test_root_redirects_to_dashboard(self, client):
+        response = client.get("/", follow_redirects=False)
+        assert response.status_code == 307
+        assert response.headers["location"] == "/dashboard"
 
 
 class TestDeviceEndpoints:
