@@ -97,8 +97,7 @@ class DeviceInfo(BaseModel):
 
     def to_msgpack(self) -> bytes:
         """Serialize to MessagePack format."""
-        return msgpack.packb(self.model_dump(mode="json"))  # type: ignore[return-value]
-
+        return msgpack.packb(self.model_dump(mode="json"))
     @classmethod
     def from_msgpack(cls, data: bytes) -> Self:
         """Deserialize from MessagePack format."""
@@ -142,8 +141,7 @@ class DeviceStatus(BaseModel):
 
     def to_msgpack(self) -> bytes:
         """Serialize to MessagePack format."""
-        return msgpack.packb(self.model_dump(mode="json"))  # type: ignore[return-value]
-
+        return msgpack.packb(self.model_dump(mode="json"))
     @classmethod
     def from_msgpack(cls, data: bytes) -> Self:
         """Deserialize from MessagePack format."""

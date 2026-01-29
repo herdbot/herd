@@ -22,7 +22,7 @@ class MessageBase(BaseModel):
     def to_msgpack(self) -> bytes:
         """Serialize message to MessagePack format."""
         data = self.model_dump(mode="json")
-        return msgpack.packb(data)  # type: ignore[return-value]
+        return msgpack.packb(data)
 
     @classmethod
     def from_msgpack(cls, data: bytes) -> Self:
