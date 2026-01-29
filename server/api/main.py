@@ -10,6 +10,7 @@ from typing import Any
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from server.core import DeviceRegistry, Settings, ZenohHub, get_settings
@@ -125,13 +126,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         }
 
     @app.get("/")
-    async def root() -> dict[str, str]:
-        """Root endpoint."""
-        return {
-            "name": "Herdbot API",
-            "version": "0.1.0",
-            "docs": "/docs",
-        }
+    async def root() -> RedirectResponse:
+        """Redirect to dashboard."""
+        return RedirectResponse(url="/dashboard")
 
     # Mount dashboard static files if they exist
     dashboard_path = Path(__file__).parent.parent / "dashboard" / "static"
