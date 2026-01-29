@@ -51,9 +51,9 @@ class OpenAIProvider(AIProvider):
         self._api_key = api_key
         self._model = model
         self._temperature = temperature
-        self._client = None
+        self._client: Any = None
 
-    def _get_client(self):
+    def _get_client(self) -> Any:
         """Lazy initialization of OpenAI client."""
         if self._client is None:
             from openai import AsyncOpenAI

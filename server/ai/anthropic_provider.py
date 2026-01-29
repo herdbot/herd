@@ -51,9 +51,9 @@ class AnthropicProvider(AIProvider):
         self._api_key = api_key
         self._model = model
         self._max_tokens = max_tokens
-        self._client = None
+        self._client: Any = None
 
-    def _get_client(self):
+    def _get_client(self) -> Any:
         """Lazy initialization of Anthropic client."""
         if self._client is None:
             from anthropic import AsyncAnthropic

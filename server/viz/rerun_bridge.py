@@ -12,7 +12,7 @@ try:
     RERUN_AVAILABLE = True
 except ImportError:
     RERUN_AVAILABLE = False
-    rr = None
+    rr = None  # type: ignore[assignment]
 
 from shared.schemas import Pose2D, SensorReading
 
@@ -98,7 +98,7 @@ class RerunBridge:
             log_data = format_sensor_reading(reading)
 
             if log_data["type"] == "scalar":
-                rr.log(entity_path, rr.Scalar(log_data["value"]))
+                rr.log(entity_path, rr.Scalar(log_data["value"]))  # type: ignore[attr-defined]
 
             elif log_data["type"] == "vector3":
                 rr.log(entity_path, rr.Points3D([log_data["value"]]))

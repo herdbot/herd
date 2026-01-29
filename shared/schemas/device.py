@@ -6,7 +6,7 @@ and status tracking.
 
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Self
 
 import msgpack
 from pydantic import BaseModel, Field
@@ -97,10 +97,10 @@ class DeviceInfo(BaseModel):
 
     def to_msgpack(self) -> bytes:
         """Serialize to MessagePack format."""
-        return msgpack.packb(self.model_dump(mode="json"))
+        return msgpack.packb(self.model_dump(mode="json"))  # type: ignore[return-value]
 
     @classmethod
-    def from_msgpack(cls, data: bytes) -> "DeviceInfo":
+    def from_msgpack(cls, data: bytes) -> Self:
         """Deserialize from MessagePack format."""
         return cls.model_validate(msgpack.unpackb(data))
 
@@ -142,9 +142,9 @@ class DeviceStatus(BaseModel):
 
     def to_msgpack(self) -> bytes:
         """Serialize to MessagePack format."""
-        return msgpack.packb(self.model_dump(mode="json"))
+        return msgpack.packb(self.model_dump(mode="json"))  # type: ignore[return-value]
 
     @classmethod
-    def from_msgpack(cls, data: bytes) -> "DeviceStatus":
+    def from_msgpack(cls, data: bytes) -> Self:
         """Deserialize from MessagePack format."""
         return cls.model_validate(msgpack.unpackb(data))

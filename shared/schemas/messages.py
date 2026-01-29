@@ -7,7 +7,7 @@ with JSON fallback.
 
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Self
 from uuid import UUID, uuid4
 
 import msgpack
@@ -21,10 +21,11 @@ class MessageBase(BaseModel):
 
     def to_msgpack(self) -> bytes:
         """Serialize message to MessagePack format."""
-        return msgpack.packb(self.model_dump(mode="json"))
+        data = self.model_dump(mode="json")
+        return msgpack.packb(data)  # type: ignore[return-value]
 
     @classmethod
-    def from_msgpack(cls, data: bytes) -> "MessageBase":
+    def from_msgpack(cls, data: bytes) -> Self:
         """Deserialize message from MessagePack format."""
         return cls.model_validate(msgpack.unpackb(data))
 
@@ -33,7 +34,7 @@ class MessageBase(BaseModel):
         return self.model_dump_json()
 
     @classmethod
-    def from_json(cls, data: str | bytes) -> "MessageBase":
+    def from_json(cls, data: str | bytes) -> Self:
         """Deserialize message from JSON string."""
         return cls.model_validate_json(data)
 
