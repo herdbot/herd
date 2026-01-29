@@ -45,9 +45,12 @@ class FakeDevice:
                     f"{self.base_url}/devices",
                     json={
                         "device_id": self.device_id,
-                        "device_type": "sensor",
+                        "device_type": "sensor_node",
                         "name": f"Fake Device ({self.device_id})",
-                        "capabilities": ["temperature", "battery"],
+                        "capabilities": [
+                            {"name": "temperature", "capability_type": "sensor"},
+                            {"name": "battery", "capability_type": "sensor"},
+                        ],
                         "firmware_version": "0.1.0-fake",
                     },
                 )
