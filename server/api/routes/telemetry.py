@@ -115,6 +115,13 @@ async def all_stream(websocket: WebSocket) -> None:
         _all_connections.remove(websocket)
 
 
+@router.post("/publish")
+async def publish_telemetry(reading: SensorReading) -> dict[str, str]:
+    """Publish telemetry via HTTP (for testing/simulation)."""
+    await broadcast_sensor_data(reading.device_id, reading)
+    return {"status": "ok"}
+
+
 @router.get("/stats", response_model=TelemetryStats)
 async def get_telemetry_stats() -> TelemetryStats:
     """Get telemetry streaming statistics."""

@@ -82,6 +82,33 @@ class FakeDevice:
         except Exception:
             return False
 
+    async def send_telemetry(self, client: httpx.AsyncClient) -> bool:
+        """Send sensor telemetry."""
+        try:
+            # Temperature
+            await client.post(
+                f"{self.base_url}/telemetry/publish",
+                json={
+                    "device_id": self.device_id,
+                    "sensor_type": "temperature",
+                    "value": round(self.temperature, 2),
+                    "unit": "celsius",
+                },
+            )
+            # Battery
+            await client.post(
+                f"{self.base_url}/telemetry/publish",
+                json={
+                    "device_id": self.device_id,
+                    "sensor_type": "battery",
+                    "value": random.randint(70, 100),
+                    "unit": "percent",
+                },
+            )
+            return True
+        except Exception:
+            return False
+
     async def run(self):
         """Run the fake device."""
         if not await self.register():
@@ -95,10 +122,13 @@ class FakeDevice:
                 self.temperature += random.uniform(-0.5, 0.5)
                 self.temperature = max(15, min(35, self.temperature))
 
-                if await self.send_heartbeat(client):
+                hb_ok = await self.send_heartbeat(client)
+                tel_ok = await self.send_telemetry(client)
+
+                if hb_ok and tel_ok:
                     print(f"[{self.device_id}] temp={self.temperature:.1f}°C uptime={self.uptime_ms // 1000}s")
                 else:
-                    print(f"[{self.device_id}] heartbeat failed")
+                    print(f"[{self.device_id}] failed (hb={hb_ok} tel={tel_ok})")
 
                 await asyncio.sleep(2)
 
