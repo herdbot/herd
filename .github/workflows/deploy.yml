@@ -29,19 +29,18 @@ jobs:
       - name: Install dependencies
         run: pip install -e .
 
-      - name: Cancel previous workflows
+      - name: Cancel previous deploy
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Cancel all in-progress workflow runs except this one
           curl -s \
             -H "Authorization: token $GH_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/runs?status=in_progress" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/deploy.yml/runs?status=in_progress" \
             | jq -r ".workflow_runs[] | select(.id != ${{ github.run_id }}) | .id" \
             | while read -r RUN_ID; do
-                if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
-                  echo "Cancelling workflow run: $RUN_ID"
+                if [ -n "$RUN_ID" ]; then
+                  echo "Cancelling previous deploy: $RUN_ID"
                   curl -s -X POST \
                     -H "Authorization: token $GH_TOKEN" \
                     -H "Accept: application/vnd.github.v3+json" \
