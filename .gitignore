@@ -63,6 +63,7 @@ Thumbs.db
 .env.local
 .env.*.local
 secrets.json
+tunnel.json
 *.pem
 *.key
 
