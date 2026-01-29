@@ -1,99 +1,152 @@
 #!/usr/bin/env python3
 """
-Simulated device for testing herd.neevs.io
+Simulated device for testing herd server.
 
-This creates a FAKE device that:
-- Registers with the server via HTTP
-- Sends heartbeats to stay online
+FAKE device that registers and sends telemetry via Zenoh pub/sub.
+Requires server running locally (Zenoh port 7447 not exposed via Cloudflare).
 
 Usage:
-    python scripts/test_device.py [--url URL] [--device-id ID]
+    # Terminal 1: Start server
+    uvicorn server.api.main:app --port 8000
 
-Default connects to herd.neevs.io. All data is synthetic.
+    # Terminal 2: Run fake device
+    python scripts/test_device.py
 """
 
 import argparse
 import asyncio
+import random
 import signal
 import sys
+import time
 
 try:
-    import httpx
+    import zenoh
 except ImportError:
-    print("Install dependencies: pip install httpx")
+    print("Install zenoh: pip install eclipse-zenoh")
     sys.exit(1)
+
+# Add parent to path for imports
+sys.path.insert(0, str(__file__).rsplit("/", 2)[0])
+
+from shared.schemas import DeviceInfo, Heartbeat, SensorReading
+from shared.schemas.messages import SensorType
 
 
 class FakeDevice:
-    """Simulated IoT device for testing."""
+    """Simulated IoT device using Zenoh."""
 
-    def __init__(self, base_url: str, device_id: str):
-        self.base_url = base_url.rstrip("/")
+    def __init__(self, zenoh_endpoint: str, device_id: str):
+        self.zenoh_endpoint = zenoh_endpoint
         self.device_id = device_id
+        self.session: zenoh.Session | None = None
         self.running = False
+        self.start_time = time.time()
+        self.temperature = 22.0
 
-    async def register(self) -> bool:
-        """Register device with server."""
-        async with httpx.AsyncClient() as client:
-            try:
-                resp = await client.post(
-                    f"{self.base_url}/devices",
-                    json={
-                        "device_id": self.device_id,
-                        "name": f"Fake Device ({self.device_id})",
-                        "device_type": "sensor_node",
-                    },
-                )
-                if resp.status_code in (200, 201):
-                    print(f"[{self.device_id}] Registered with {self.base_url}")
-                    return True
-                else:
-                    print(f"[{self.device_id}] Registration failed: {resp.status_code} {resp.text}")
-                    return False
-            except Exception as e:
-                print(f"[{self.device_id}] Connection failed: {e}")
-                return False
+    def connect(self) -> bool:
+        """Connect to Zenoh router."""
+        try:
+            config = zenoh.Config()
+            config.insert_json5("mode", '"client"')
+            config.insert_json5("connect/endpoints", f'["{self.zenoh_endpoint}"]')
 
-    async def run(self):
-        """Run the fake device."""
-        if not await self.register():
+            self.session = zenoh.open(config)
+            print(f"[{self.device_id}] Connected to Zenoh at {self.zenoh_endpoint}")
+            return True
+        except Exception as e:
+            print(f"[{self.device_id}] Zenoh connection failed: {e}")
+            return False
+
+    def register(self):
+        """Publish device info to register."""
+        if not self.session:
             return
 
-        self.running = True
-        print(f"[{self.device_id}] Sending heartbeats (Ctrl+C to stop)")
+        info = DeviceInfo(
+            device_id=self.device_id,
+            name=f"Fake Device ({self.device_id})",
+            device_type="sensor_node",
+        )
 
-        async with httpx.AsyncClient() as client:
+        topic = f"herd/devices/{self.device_id}/info"
+        self.session.put(topic, info.to_msgpack())
+        print(f"[{self.device_id}] Registered")
+
+    def send_heartbeat(self):
+        """Send heartbeat to stay online."""
+        if not self.session:
+            return
+
+        uptime_ms = int((time.time() - self.start_time) * 1000)
+        heartbeat = Heartbeat(
+            device_id=self.device_id,
+            uptime_ms=uptime_ms,
+        )
+
+        topic = f"herd/devices/{self.device_id}/heartbeat"
+        self.session.put(topic, heartbeat.to_msgpack())
+
+    def send_temperature(self):
+        """Send fake temperature reading."""
+        if not self.session:
+            return
+
+        self.temperature += random.uniform(-0.5, 0.5)
+        self.temperature = max(15, min(35, self.temperature))
+
+        reading = SensorReading(
+            device_id=self.device_id,
+            sensor_type=SensorType.TEMPERATURE,
+            value=round(self.temperature, 2),
+            unit="celsius",
+        )
+
+        topic = f"herd/sensors/{self.device_id}/temperature"
+        self.session.put(topic, reading.to_msgpack())
+        print(f"[{self.device_id}] temp={self.temperature:.1f}°C")
+
+    def run(self):
+        """Run the fake device."""
+        if not self.connect():
+            return
+
+        self.register()
+        self.running = True
+        print(f"[{self.device_id}] Running (Ctrl+C to stop)")
+
+        try:
             while self.running:
-                try:
-                    resp = await client.post(f"{self.base_url}/devices/{self.device_id}/heartbeat")
-                    if resp.status_code == 200:
-                        print(f"[{self.device_id}] heartbeat ok")
-                    else:
-                        print(f"[{self.device_id}] heartbeat failed: {resp.status_code}")
-                except Exception as e:
-                    print(f"[{self.device_id}] heartbeat error: {e}")
-                await asyncio.sleep(2)
+                self.send_heartbeat()
+                self.send_temperature()
+                time.sleep(2)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            if self.session:
+                self.session.close()
+            print(f"\n[{self.device_id}] Stopped")
 
     def stop(self):
         """Stop the device."""
         self.running = False
-        print(f"\n[{self.device_id}] Stopped")
 
 
-async def main():
-    parser = argparse.ArgumentParser(description="Simulated herd device")
-    parser.add_argument("--url", default="https://herd.neevs.io", help="Server URL")
+def main():
+    parser = argparse.ArgumentParser(description="Simulated herd device (Zenoh)")
+    parser.add_argument(
+        "--zenoh", default="tcp/localhost:7447", help="Zenoh endpoint"
+    )
     parser.add_argument("--device-id", default="fake-device-01", help="Device ID")
     args = parser.parse_args()
 
-    device = FakeDevice(args.url, args.device_id)
+    device = FakeDevice(args.zenoh, args.device_id)
 
-    loop = asyncio.get_event_loop()
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(sig, device.stop)
+    signal.signal(signal.SIGINT, lambda *_: device.stop())
+    signal.signal(signal.SIGTERM, lambda *_: device.stop())
 
-    await device.run()
+    device.run()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

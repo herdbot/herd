@@ -1,41 +1,51 @@
 # Testing Herd
 
-## Quick Start
+## Local Testing (Zenoh)
+
+Zenoh pub/sub requires direct TCP connection (port 7447), so run locally:
 
 ```bash
-pip install httpx websockets
+# Terminal 1: Start server
+uvicorn server.api.main:app --port 8000
+
+# Terminal 2: Run fake device
+pip install eclipse-zenoh
 python scripts/test_device.py
 ```
-
-This creates a **fake device** (`fake-device-01`) that sends synthetic sensor data to `herd.neevs.io`.
 
 ## What's Fake
 
 | Component | Real | Fake |
 |-----------|------|------|
-| Server (herd.neevs.io) | Yes | - |
-| Dashboard UI | Yes | - |
-| API endpoints | Yes | - |
+| Server | Yes | - |
+| Dashboard (localhost:8000) | Yes | - |
+| Zenoh pub/sub | Yes | - |
 | Device (`fake-device-01`) | - | Yes |
-| Sensor readings | - | Yes (random temperature/battery) |
-| WebSocket connection | Yes | - |
+| Temperature readings | - | Yes (random 15-35°C) |
 
 ## Options
 
 ```bash
 # Custom device ID
-python scripts/test_device.py --device-id my-test-bot
+python scripts/test_device.py --device-id my-robot
 
-# Local server
-python scripts/test_device.py --url http://localhost:8000
+# Custom Zenoh endpoint
+python scripts/test_device.py --zenoh tcp/192.168.1.100:7447
 ```
 
-## Verify
+## Topics
 
-1. Open https://herd.neevs.io
-2. Run `python scripts/test_device.py`
-3. Dashboard should show `fake-device-01` with live telemetry
+The fake device publishes to:
+- `herd/devices/{id}/info` - Registration (DeviceInfo)
+- `herd/devices/{id}/heartbeat` - Heartbeat every 2s
+- `herd/sensors/{id}/temperature` - Temperature readings
+
+## Cloud Testing
+
+For herd.neevs.io, use the HTTP endpoints (Zenoh port not exposed):
+- `POST /devices` - Register device
+- `POST /devices/{id}/heartbeat` - Send heartbeat
 
 ## Cleanup
 
-Stop the script (Ctrl+C). Fake devices disappear after heartbeat timeout (~6s).
+Devices go offline after ~6s without heartbeat.
