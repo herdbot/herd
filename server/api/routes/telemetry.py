@@ -4,10 +4,9 @@ import asyncio
 import json
 from typing import Any
 
+import structlog
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
-
-import structlog
 
 from shared.schemas import SensorReading
 
@@ -80,7 +79,7 @@ async def device_stream(websocket: WebSocket, device_id: str) -> None:
                 # Handle ping/pong or commands from client
                 if data == "ping":
                     await websocket.send_text("pong")
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # Send keepalive
                 await websocket.send_text(json.dumps({"type": "keepalive"}))
 
@@ -107,7 +106,7 @@ async def all_stream(websocket: WebSocket) -> None:
                 data = await asyncio.wait_for(websocket.receive_text(), timeout=30)
                 if data == "ping":
                     await websocket.send_text("pong")
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 await websocket.send_text(json.dumps({"type": "keepalive"}))
 
     except WebSocketDisconnect:
@@ -157,7 +156,7 @@ async def get_latest_telemetry(device_id: str) -> dict[str, Any]:
     results = await hub.query(selector, timeout_s=2.0)
 
     readings = []
-    for key, payload in results:
+    for _key, payload in results:
         try:
             reading = SensorReading.from_msgpack(payload)
             readings.append(reading.model_dump(mode="json"))

@@ -3,12 +3,12 @@
 Handles MQTT connection, heartbeat, and command handling.
 """
 
-import time
 import json
+import time
 
 try:
-    from umqtt.simple import MQTTClient
     import machine
+    from umqtt.simple import MQTTClient
 except ImportError:
     # Running on CPython for testing
     MQTTClient = None

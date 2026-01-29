@@ -5,8 +5,8 @@ Converts herdbot message types to Rerun-compatible formats.
 
 from typing import Any
 
-from shared.schemas import Pose2D, SensorReading, DeviceStatus
-from shared.schemas.device import SensorType, ConnectionStatus
+from shared.schemas import DeviceStatus, Pose2D, SensorReading
+from shared.schemas.device import ConnectionStatus, SensorType
 
 
 def format_sensor_reading(reading: SensorReading) -> dict[str, Any]:
@@ -91,7 +91,7 @@ def format_sensor_reading(reading: SensorReading) -> dict[str, Any]:
             return {"type": "scalar", "value": float(value[0]), "unit": reading.unit}
     elif isinstance(value, dict):
         # Try to find a numeric value
-        for k, v in value.items():
+        for _k, v in value.items():
             if isinstance(v, (int, float)):
                 return {"type": "scalar", "value": float(v), "unit": reading.unit}
 

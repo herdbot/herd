@@ -19,8 +19,8 @@ Example:
 """
 
 from .client import Device
-from .sensors import Sensor
 from .discovery import discover_server
+from .sensors import Sensor
 
 __version__ = "0.1.0"
 

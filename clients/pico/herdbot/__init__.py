@@ -19,7 +19,7 @@ Example:
 """
 
 from .client import Device
-from .sensors import Sensor, DistanceSensor, TemperatureSensor
+from .sensors import DistanceSensor, Sensor, TemperatureSensor
 
 __version__ = "0.1.0"
 

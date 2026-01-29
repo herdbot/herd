@@ -13,12 +13,12 @@ Usage:
 """
 
 import time
-from machine import I2C, Pin
 
 # Herdbot imports
 from herdbot import Device
-from herdbot.sensors import IMUSensor
 from herdbot.discovery import wait_for_wifi
+from herdbot.sensors import IMUSensor
+from machine import I2C, Pin
 
 # WiFi configuration
 WIFI_SSID = "your_wifi_ssid"

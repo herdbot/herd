@@ -2,10 +2,9 @@
 
 from typing import Any
 
+import structlog
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-
-import structlog
 
 logger = structlog.get_logger()
 

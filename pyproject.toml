@@ -66,10 +66,21 @@ packages = ["server", "shared", "cli"]
 [tool.ruff]
 target-version = "py311"
 line-length = 100
+exclude = ["clients/*"]  # MicroPython code has different conventions
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
-ignore = ["E501"]
+ignore = [
+    "E501",   # Line too long
+    "SIM102", # Nested if statements (sometimes more readable)
+    "SIM103", # Return bool directly
+    "SIM105", # contextlib.suppress
+    "B904",   # raise from (not always needed)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"examples/*" = ["E722", "F401"]  # Examples can be more lenient
+"tests/*" = ["F401"]  # Unused imports in tests are fine
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

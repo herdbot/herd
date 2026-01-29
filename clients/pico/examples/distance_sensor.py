@@ -17,11 +17,11 @@ Usage:
 """
 
 import time
-import network
-from machine import Pin
 
+import network
 from herdbot import Device
 from herdbot.sensors import DistanceSensor
+from machine import Pin
 
 # WiFi configuration
 WIFI_SSID = "your_wifi_ssid"

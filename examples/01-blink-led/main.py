@@ -94,7 +94,6 @@ def main():
 
     # Connect (skip if no server)
     if MICROPYTHON:
-        from herdbot.discovery import wait_for_wifi
         # wait_for_wifi("YourSSID", "YourPassword")
 
         if not device.connect():

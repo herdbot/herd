@@ -4,13 +4,13 @@ Provides REST API and WebSocket endpoints for external integrations.
 """
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pathlib import Path
 
 from server.core import DeviceRegistry, Settings, ZenohHub, get_settings
 

@@ -3,7 +3,6 @@
 Routes AI requests to appropriate providers and manages API keys.
 """
 
-from functools import lru_cache
 from typing import Any
 
 import structlog

@@ -6,8 +6,9 @@ Supports mDNS discovery and manual configuration.
 import time
 
 try:
-    import network
     import socket
+
+    import network
 except ImportError:
     network = None
     socket = None

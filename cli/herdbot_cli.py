@@ -17,7 +17,6 @@ from typing import Any
 import click
 import httpx
 
-
 # Default server URL
 DEFAULT_URL = "http://localhost:8000"
 

@@ -4,12 +4,12 @@ Handles MQTT connection, heartbeat, and command handling.
 Same API as ESP32 client for compatibility.
 """
 
-import time
 import json
+import time
 
 try:
-    from umqtt.simple import MQTTClient
     import machine
+    from umqtt.simple import MQTTClient
 except ImportError:
     MQTTClient = None
     machine = None

@@ -3,7 +3,6 @@
 Subscribes to Zenoh topics and forwards data to Rerun for visualization.
 """
 
-import asyncio
 from typing import Any
 
 import structlog
@@ -16,7 +15,6 @@ except ImportError:
     rr = None
 
 from shared.schemas import Pose2D, SensorReading
-from shared.schemas.device import SensorType
 
 from .formatters import format_pose, format_sensor_reading
 

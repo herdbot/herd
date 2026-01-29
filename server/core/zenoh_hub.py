@@ -5,7 +5,6 @@ Manages Zenoh session, topic subscriptions, and message routing.
 
 import asyncio
 from collections.abc import Awaitable, Callable
-from typing import Any
 
 import structlog
 import zenoh
