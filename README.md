@@ -1,15 +1,16 @@
-# Herdbot 🤖
+# Herdbot
 
-A lightweight, educational robotics framework bridging the gap between simple Raspberry Pi projects and full ROS stacks. Uses Zenoh for messaging, supports ESP32/Pico clients, and integrates easily with cloud AI services.
+A lightweight robotics framework bridging simple Pi projects and full ROS stacks. Built on [Zenoh](https://zenoh.io/) for efficient pub/sub messaging, with support for ESP32/Pico microcontrollers and cloud AI integration.
 
 ## Features
 
-- **Zenoh Messaging** - High-performance pub/sub with automatic discovery
-- **ESP32/Pico Support** - MicroPython client libraries for embedded devices
-- **REST API** - FastAPI-based HTTP and WebSocket interface
-- **AI Integration** - OpenAI and Anthropic providers for intelligent automation
-- **Visualization** - Rerun integration and web dashboard
-- **GitHub Actions Deployment** - Run as a long-running cloud service
+- **Zenoh-based messaging**: Efficient, low-latency pub/sub communication
+- **Device management**: Automatic discovery and heartbeat monitoring
+- **Multi-platform clients**: MicroPython libraries for ESP32 and Raspberry Pi Pico
+- **AI integration**: OpenAI and Anthropic providers for intelligent robotics
+- **REST/WebSocket API**: FastAPI-based interface for web dashboards
+- **Visualization**: Rerun SDK integration for 3D visualization
+- **GitHub Actions deployment**: Run as a long-running workflow with auto-restart
 
 ## Quick Start
 
@@ -17,175 +18,150 @@ A lightweight, educational robotics framework bridging the gap between simple Ra
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/herdbot.git
+git clone https://github.com/jonasnvs/herdbot.git
 cd herdbot
 
 # Install dependencies
-pip install -e .
+pip install -e ".[dev]"
 
-# Start the server
-herdbot start
+# Copy environment template
+cp .env.example .env
 ```
 
-### Connect an ESP32
-
-```python
-from herdbot import Device, Sensor
-
-device = Device(
-    device_id="sensor-01",
-    device_type="sensor_node",
-    server="192.168.1.100"
-)
-
-temp = Sensor(device, "temp", sensor_type="temperature", unit="C")
-
-while True:
-    reading = read_temperature()  # Your sensor code
-    temp.publish(reading)
-    time.sleep(1)
-```
-
-### Send Commands
+### Running the Server
 
 ```bash
-# List devices
-herdbot devices
+# Start with CLI
+herdbot server --host 0.0.0.0 --port 8080
 
-# Send a command
-herdbot send robot-01 move --params '{"linear": 0.5, "angular": 0}'
+# Or with uvicorn directly
+uvicorn server.api.app:app --host 0.0.0.0 --port 8080
+```
 
-# Monitor telemetry
-herdbot monitor sensor-01
+### Docker
+
+```bash
+# Build and run
+docker build -t herdbot .
+docker run -p 8080:8080 --env-file .env herdbot
 ```
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      Herdbot Server                          │
-├─────────────┬─────────────┬─────────────┬──────────────────┤
-│   Zenoh     │   FastAPI   │   Rerun     │   AI Providers   │
-│   Hub       │   REST/WS   │   Bridge    │   OpenAI/Claude  │
-└──────┬──────┴──────┬──────┴──────┬──────┴────────┬─────────┘
-       │             │             │               │
-       │ Zenoh/MQTT  │ HTTP/WS     │ Rerun SDK     │ API
-       │             │             │               │
-┌──────┴──────┐  ┌───┴────┐  ┌────┴─────┐  ┌─────┴─────┐
-│  ESP32/Pico │  │  Web   │  │  Rerun   │  │  OpenAI   │
-│  Devices    │  │ Browser│  │  Viewer  │  │  Claude   │
-└─────────────┘  └────────┘  └──────────┘  └───────────┘
+│                     Herdbot Server                          │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │  Zenoh Hub  │  │  Device     │  │  REST/WebSocket API │  │
+│  │  (pub/sub)  │  │  Registry   │  │  (FastAPI)          │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │  AI Service │  │  Rerun      │  │  MQTT Bridge        │  │
+│  │  (LLM)      │  │  (Viz)      │  │  (ESP32/Pico)       │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+         │                                      │
+         │ Zenoh                                │ MQTT
+         ▼                                      ▼
+┌─────────────────┐                  ┌─────────────────┐
+│  Native Client  │                  │  ESP32 / Pico   │
+│  (Python/Rust)  │                  │  (MicroPython)  │
+└─────────────────┘                  └─────────────────┘
 ```
 
 ## Configuration
 
-Environment variables (or `.env` file):
+Environment variables (`.env`):
 
-```bash
-# Server
-HERDBOT_API_PORT=8000
-HERDBOT_SERVER_ID=herdbot-01
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `HERDBOT_HOST` | Server host | `0.0.0.0` |
+| `HERDBOT_PORT` | Server port | `8080` |
+| `HERDBOT_ZENOH_CONNECT` | Zenoh router address | (peer mode) |
+| `HERDBOT_MQTT_BROKER` | MQTT broker for ESP32/Pico | `localhost` |
+| `HERDBOT_MQTT_PORT` | MQTT port | `1883` |
+| `OPENAI_API_KEY` | OpenAI API key | - |
+| `ANTHROPIC_API_KEY` | Anthropic API key | - |
+| `CLOUDFLARE_TUNNEL_TOKEN` | Cloudflare tunnel token | - |
 
-# Zenoh
-HERDBOT_ZENOH_MODE=peer
-HERDBOT_ZENOH_LISTEN=["tcp/0.0.0.0:7447"]
+## Client Libraries
 
-# MQTT Bridge (for ESP32/Pico)
-HERDBOT_MQTT_ENABLED=true
-HERDBOT_MQTT_PORT=1883
-
-# AI (optional)
-HERDBOT_OPENAI_API_KEY=sk-...
-HERDBOT_ANTHROPIC_API_KEY=sk-ant-...
-HERDBOT_DEFAULT_AI_PROVIDER=openai
-```
-
-## API Reference
-
-### REST Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/devices` | GET | List all devices |
-| `/devices/{id}` | GET | Get device details |
-| `/devices/{id}/command` | POST | Send command |
-| `/devices/{id}/status` | GET | Get device status |
-| `/telemetry/stream/{id}` | WS | Stream telemetry |
-| `/telemetry/stream/all` | WS | Stream all telemetry |
-| `/ai/interpret` | POST | AI data interpretation |
-| `/ai/plan` | POST | AI action planning |
-| `/ai/chat` | POST | AI chat interface |
-| `/health` | GET | Health check |
-
-### Message Types
+### ESP32 (MicroPython)
 
 ```python
-# Sensor reading
-SensorReading(
-    device_id="sensor-01",
-    sensor_type="temperature",
-    value=23.5,
-    unit="C"
-)
+from herdbot_client import HerdClient
 
-# Command
-Command(
-    device_id="robot-01",
-    action="move",
-    params={"linear": 0.5, "angular": 0}
+client = HerdClient(
+    device_id="esp32-001",
+    mqtt_broker="your-server.com"
 )
+client.connect()
 
-# Pose
-Pose2D(x=1.0, y=2.0, theta=0.5, frame_id="world")
+# Publish sensor data
+client.publish_sensor("temperature", 25.5)
+
+# Subscribe to commands
+def on_command(cmd):
+    print(f"Received: {cmd}")
+
+client.on_command = on_command
+```
+
+### Raspberry Pi Pico
+
+```python
+from herdbot_pico import HerdClient
+
+client = HerdClient(
+    device_id="pico-001",
+    wifi_ssid="YourNetwork",
+    wifi_password="password",
+    mqtt_broker="your-server.com"
+)
+client.connect()
 ```
 
 ## GitHub Actions Deployment
 
-Herdbot can run as a long-running GitHub Actions workflow with automatic restart:
+Herdbot can run as a GitHub Actions workflow with automatic restart to handle the 6-hour timeout limit:
 
-```yaml
-# See .github/workflows/herdbot.yml
+1. Fork this repository
+2. Add secrets in repository settings:
+   - `OPENAI_API_KEY` (optional)
+   - `ANTHROPIC_API_KEY` (optional)
+   - `CLOUDFLARE_TUNNEL_TOKEN` (optional, for external access)
+3. Enable the workflow in Actions tab
+4. Trigger manually or on push
+
+The workflow runs for 5.5 hours then triggers a new instance before timeout.
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Health check |
+| `/api/devices` | GET | List all devices |
+| `/api/devices/{id}` | GET | Get device details |
+| `/api/devices/{id}/command` | POST | Send command to device |
+| `/api/ai/chat` | POST | Chat with AI assistant |
+| `/ws` | WebSocket | Real-time updates |
+
+## Development
+
+```bash
+# Install dev dependencies
+pip install -e ".[dev]"
+
+# Run linting
+ruff check .
+
+# Run type checking
+mypy server shared
+
+# Run tests
+pytest
 ```
-
-Features:
-- Runs for ~5.5 hours (below 6-hour limit)
-- Auto-triggers new workflow before timeout
-- Parallel instances for zero-downtime restarts
-- Cloudflare Tunnel for external access
-
-## Project Structure
-
-```
-herdbot/
-├── server/
-│   ├── core/          # Zenoh hub, device registry
-│   ├── api/           # FastAPI routes
-│   ├── viz/           # Rerun bridge
-│   ├── ai/            # AI providers
-│   └── dashboard/     # Web UI
-├── clients/
-│   ├── esp32/         # ESP32 MicroPython library
-│   └── pico/          # Pico W MicroPython library
-├── shared/
-│   └── schemas/       # Message definitions
-├── cli/               # CLI tool
-├── docs/              # Documentation
-└── examples/          # Example projects
-```
-
-## Examples
-
-See the `examples/` directory:
-
-1. **01-blink-led** - Simplest possible example
-2. **02-sensor-dashboard** - ESP32 + web visualization
-3. **03-ai-object-detector** - Camera + AI integration
-4. **04-multi-robot** - Multiple device coordination
 
 ## License
 
-MIT License - See [LICENSE](LICENSE) for details.
-
-## Contributing
-
-Contributions welcome! Please read the contributing guidelines first.
+MIT License - see [LICENSE](LICENSE) for details.
