@@ -62,19 +62,30 @@ jobs:
           echo "HERDBOT_LOG_LEVEL=INFO" >> $GITHUB_ENV
 
       - name: Set up secrets
-        if: ${{ secrets.OPENAI_API_KEY != '' }}
+        env:
+          OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          echo "HERDBOT_OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> $GITHUB_ENV
-          echo "HERDBOT_ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" >> $GITHUB_ENV
+          if [ -n "$OPENAI_KEY" ]; then
+            echo "HERDBOT_OPENAI_API_KEY=$OPENAI_KEY" >> $GITHUB_ENV
+          fi
+          if [ -n "$ANTHROPIC_KEY" ]; then
+            echo "HERDBOT_ANTHROPIC_API_KEY=$ANTHROPIC_KEY" >> $GITHUB_ENV
+          fi
 
       - name: Start Cloudflare Tunnel
-        if: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN != '' }}
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
         run: |
-          # Start tunnel in background
-          cloudflared tunnel --no-autoupdate run --token ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }} &
-          echo "TUNNEL_PID=$!" >> $GITHUB_ENV
-          sleep 5
-          echo "Cloudflare tunnel started"
+          if [ -n "$CF_TOKEN" ]; then
+            # Start tunnel in background
+            cloudflared tunnel --no-autoupdate run --token "$CF_TOKEN" &
+            echo "TUNNEL_PID=$!" >> $GITHUB_ENV
+            sleep 5
+            echo "Cloudflare tunnel started"
+          else
+            echo "No Cloudflare tunnel token, skipping"
+          fi
 
       - name: Start Herdbot Server
         id: server
