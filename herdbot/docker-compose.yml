@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  herdbot:
+    build: .
+    container_name: herdbot
+    ports:
+      - "8000:8000"   # API
+      - "7447:7447"   # Zenoh
+      - "1883:1883"   # MQTT
+    environment:
+      - HERDBOT_SERVER_ID=herdbot-docker
+      - HERDBOT_API_PORT=8000
+      - HERDBOT_ZENOH_MODE=peer
+      - HERDBOT_MQTT_ENABLED=true
+      - HERDBOT_LOG_LEVEL=INFO
+      # Uncomment and set your API keys
+      # - HERDBOT_OPENAI_API_KEY=${OPENAI_API_KEY}
+      # - HERDBOT_ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - herdbot-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Optional: MQTT broker for devices that need standard MQTT
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: herdbot-mqtt
+    ports:
+      - "1884:1883"  # Different port to avoid conflict
+      - "9001:9001"  # WebSocket
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+    restart: unless-stopped
+    profiles:
+      - mqtt-broker
+
+  # Optional: Cloudflare tunnel for external access
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: herdbot-tunnel
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - herdbot
+    restart: unless-stopped
+    profiles:
+      - tunnel
+
+volumes:
+  herdbot-data:
+  mosquitto-data:
+  mosquitto-log:
+
+networks:
+  default:
+    name: herdbot-network

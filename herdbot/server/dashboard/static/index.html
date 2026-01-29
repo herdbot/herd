@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Herdbot Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--surface);
+            margin-bottom: 1.5rem;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.online { background: var(--success); }
+        .status-dot.offline { background: var(--danger); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 900px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: 0.75rem;
+            padding: 1rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .card-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .device-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .device-item {
+            padding: 0.75rem;
+            background: rgba(255,255,255,0.05);
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .device-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .device-item.active {
+            background: var(--primary);
+        }
+
+        .device-name {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .device-type {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .chart-container {
+            height: 200px;
+            position: relative;
+        }
+
+        .command-panel {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        input, select, button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 0.875rem;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        button {
+            background: var(--primary);
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button.secondary {
+            background: var(--surface);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 300px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .chat-message {
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            max-width: 80%;
+        }
+
+        .chat-message.user {
+            background: var(--primary);
+            align-self: flex-end;
+        }
+
+        .chat-message.ai {
+            background: rgba(255,255,255,0.1);
+            align-self: flex-start;
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .chat-input input {
+            flex: 1;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="container" x-data="dashboard()">
+        <header>
+            <h1>
+                <span class="status-dot" :class="connected ? 'online' : 'offline'"></span>
+                Herdbot Dashboard
+            </h1>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value" x-text="devices.length">0</div>
+                    <div class="stat-label">Devices</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" x-text="onlineCount">0</div>
+                    <div class="stat-label">Online</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" x-text="messagesPerSecond">0</div>
+                    <div class="stat-label">Msg/s</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" x-text="uptime">0s</div>
+                    <div class="stat-label">Uptime</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid">
+            <!-- Device List -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Devices</span>
+                    <button class="secondary" @click="refreshDevices">Refresh</button>
+                </div>
+                <div class="device-list">
+                    <template x-if="devices.length === 0">
+                        <div class="empty-state">No devices connected</div>
+                    </template>
+                    <template x-for="device in devices" :key="device.device_id">
+                        <div class="device-item"
+                             :class="{ active: selectedDevice?.device_id === device.device_id }"
+                             @click="selectDevice(device)">
+                            <div class="device-name">
+                                <span class="status-dot" :class="device.status === 'online' ? 'online' : 'offline'"></span>
+                                <span x-text="device.name || device.device_id"></span>
+                            </div>
+                            <div class="device-type" x-text="device.device_type"></div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Telemetry Charts -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Telemetry</span>
+                        <select x-model="chartTimeRange">
+                            <option value="30">30 seconds</option>
+                            <option value="60">1 minute</option>
+                            <option value="300">5 minutes</option>
+                        </select>
+                    </div>
+                    <div class="charts-grid">
+                        <div class="chart-container">
+                            <canvas id="sensorChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="commandChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Command Panel -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Commands</span>
+                    </div>
+                    <div class="command-panel">
+                        <select x-model="commandAction">
+                            <option value="move">Move</option>
+                            <option value="stop">Stop</option>
+                            <option value="calibrate">Calibrate</option>
+                            <option value="get_reading">Get Reading</option>
+                        </select>
+                        <input type="text" x-model="commandParams" placeholder='{"linear": 0.5, "angular": 0}'>
+                        <button @click="sendCommand" :disabled="!selectedDevice">Send Command</button>
+                    </div>
+                </div>
+
+                <!-- AI Chat -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">AI Assistant</span>
+                    </div>
+                    <div class="chat-container">
+                        <div class="chat-messages">
+                            <template x-for="msg in chatMessages" :key="msg.id">
+                                <div class="chat-message" :class="msg.role">
+                                    <span x-text="msg.content"></span>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="chat-input">
+                            <input type="text" x-model="chatInput" @keyup.enter="sendChat" placeholder="Ask about your robots...">
+                            <button @click="sendChat">Send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function dashboard() {
+            return {
+                connected: false,
+                devices: [],
+                selectedDevice: null,
+                onlineCount: 0,
+                messagesPerSecond: 0,
+                uptime: '0s',
+                chartTimeRange: '60',
+                commandAction: 'move',
+                commandParams: '{}',
+                chatMessages: [],
+                chatInput: '',
+                ws: null,
+                sensorChart: null,
+                messageCount: 0,
+                startTime: Date.now(),
+
+                init() {
+                    this.refreshDevices();
+                    this.initCharts();
+                    this.connectWebSocket();
+
+                    // Update uptime every second
+                    setInterval(() => {
+                        const seconds = Math.floor((Date.now() - this.startTime) / 1000);
+                        if (seconds < 60) this.uptime = `${seconds}s`;
+                        else if (seconds < 3600) this.uptime = `${Math.floor(seconds/60)}m`;
+                        else this.uptime = `${Math.floor(seconds/3600)}h`;
+                    }, 1000);
+
+                    // Calculate messages per second
+                    setInterval(() => {
+                        this.messagesPerSecond = this.messageCount;
+                        this.messageCount = 0;
+                    }, 1000);
+                },
+
+                async refreshDevices() {
+                    try {
+                        const res = await fetch('/devices');
+                        const data = await res.json();
+                        this.devices = data.devices.map(d => ({
+                            ...d,
+                            status: 'online' // Simplified
+                        }));
+                        this.onlineCount = data.online;
+                        this.connected = true;
+                    } catch (e) {
+                        console.error('Failed to fetch devices:', e);
+                        this.connected = false;
+                    }
+                },
+
+                selectDevice(device) {
+                    this.selectedDevice = device;
+                    this.connectDeviceStream(device.device_id);
+                },
+
+                connectWebSocket() {
+                    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    this.ws = new WebSocket(`${protocol}//${window.location.host}/telemetry/stream/all`);
+
+                    this.ws.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        if (data.type !== 'keepalive') {
+                            this.messageCount++;
+                            this.updateChart(data);
+                        }
+                    };
+
+                    this.ws.onclose = () => {
+                        this.connected = false;
+                        setTimeout(() => this.connectWebSocket(), 5000);
+                    };
+
+                    this.ws.onerror = () => {
+                        this.connected = false;
+                    };
+                },
+
+                connectDeviceStream(deviceId) {
+                    // Additional device-specific stream if needed
+                },
+
+                initCharts() {
+                    const ctx1 = document.getElementById('sensorChart').getContext('2d');
+                    this.sensorChart = new Chart(ctx1, {
+                        type: 'line',
+                        data: {
+                            labels: [],
+                            datasets: [{
+                                label: 'Sensor Value',
+                                data: [],
+                                borderColor: '#3b82f6',
+                                tension: 0.1,
+                                fill: false
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { display: false },
+                                y: { beginAtZero: true }
+                            },
+                            plugins: {
+                                legend: { display: false }
+                            }
+                        }
+                    });
+                },
+
+                updateChart(data) {
+                    if (!this.sensorChart) return;
+
+                    const now = new Date().toLocaleTimeString();
+                    const value = typeof data.value === 'number' ? data.value :
+                                  Array.isArray(data.value) ? data.value[0] : 0;
+
+                    this.sensorChart.data.labels.push(now);
+                    this.sensorChart.data.datasets[0].data.push(value);
+
+                    // Keep last N points
+                    const maxPoints = parseInt(this.chartTimeRange);
+                    if (this.sensorChart.data.labels.length > maxPoints) {
+                        this.sensorChart.data.labels.shift();
+                        this.sensorChart.data.datasets[0].data.shift();
+                    }
+
+                    this.sensorChart.update('none');
+                },
+
+                async sendCommand() {
+                    if (!this.selectedDevice) return;
+
+                    try {
+                        const params = JSON.parse(this.commandParams || '{}');
+                        const res = await fetch(`/devices/${this.selectedDevice.device_id}/command`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                action: this.commandAction,
+                                params: params
+                            })
+                        });
+                        const data = await res.json();
+                        console.log('Command sent:', data);
+                    } catch (e) {
+                        console.error('Failed to send command:', e);
+                    }
+                },
+
+                async sendChat() {
+                    if (!this.chatInput.trim()) return;
+
+                    const userMsg = {
+                        id: Date.now(),
+                        role: 'user',
+                        content: this.chatInput
+                    };
+                    this.chatMessages.push(userMsg);
+
+                    const input = this.chatInput;
+                    this.chatInput = '';
+
+                    try {
+                        const res = await fetch('/ai/chat', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                message: input,
+                                history: this.chatMessages.slice(0, -1).map(m => ({
+                                    role: m.role,
+                                    content: m.content
+                                }))
+                            })
+                        });
+                        const data = await res.json();
+
+                        this.chatMessages.push({
+                            id: Date.now(),
+                            role: 'ai',
+                            content: data.response
+                        });
+                    } catch (e) {
+                        this.chatMessages.push({
+                            id: Date.now(),
+                            role: 'ai',
+                            content: 'AI service unavailable. Configure API keys in settings.'
+                        });
+                    }
+                }
+            };
+        }
+    </script>
+</body>
+</html>
