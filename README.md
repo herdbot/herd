@@ -10,7 +10,7 @@ A lightweight robotics framework bridging simple Pi projects and full ROS stacks
 - **AI integration**: OpenAI and Anthropic providers for intelligent robotics
 - **REST/WebSocket API**: FastAPI-based interface for web dashboards
 - **Visualization**: Rerun SDK integration for 3D visualization
-- **GitHub Actions deployment**: Run as a long-running workflow with auto-restart
+- **GitHub Actions deployment**: Run as a long-running workflow with Cloudflare Tunnel
 
 ## Quick Start
 
