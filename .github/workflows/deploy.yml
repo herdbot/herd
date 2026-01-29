@@ -29,24 +29,26 @@ jobs:
       - name: Install dependencies
         run: pip install -e .
 
-      - name: Cancel previous workflow
+      - name: Cancel previous workflows
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PREVIOUS_RUN_ID=$(curl -s \
+          # Cancel all in-progress workflow runs except this one
+          curl -s \
             -H "Authorization: token $GH_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/deploy.yml/runs?status=in_progress" \
-            | jq -r ".workflow_runs[] | select(.id < ${{ github.run_id }}) | .id" | head -1)
-
-          if [ -n "$PREVIOUS_RUN_ID" ] && [ "$PREVIOUS_RUN_ID" != "null" ]; then
-            echo "Cancelling previous workflow: $PREVIOUS_RUN_ID"
-            curl -s -X POST \
-              -H "Authorization: token $GH_TOKEN" \
-              -H "Accept: application/vnd.github.v3+json" \
-              "https://api.github.com/repos/${{ github.repository }}/actions/runs/$PREVIOUS_RUN_ID/cancel"
-            sleep 5
-          fi
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs?status=in_progress" \
+            | jq -r ".workflow_runs[] | select(.id != ${{ github.run_id }}) | .id" \
+            | while read -r RUN_ID; do
+                if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
+                  echo "Cancelling workflow run: $RUN_ID"
+                  curl -s -X POST \
+                    -H "Authorization: token $GH_TOKEN" \
+                    -H "Accept: application/vnd.github.v3+json" \
+                    "https://api.github.com/repos/${{ github.repository }}/actions/runs/$RUN_ID/cancel"
+                fi
+              done
+          sleep 5
 
       - name: Start server
         env:
