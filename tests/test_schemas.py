@@ -8,12 +8,14 @@ import pytest
 from shared.schemas import (
     Command,
     CommandResponse,
+    ConnectionStatus,
     DeviceInfo,
     DeviceStatus,
+    DeviceType,
     Pose2D,
     SensorReading,
+    SensorType,
 )
-from shared.schemas.device import ConnectionStatus, DeviceType, SensorType
 
 
 class TestSensorReading:
