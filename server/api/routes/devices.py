@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from shared.schemas import Command, DeviceInfo, DeviceStatus
+from shared.schemas.messages import Heartbeat
 
 router = APIRouter()
 
@@ -58,6 +59,31 @@ async def list_devices() -> DeviceListResponse:
         total=len(devices),
         online=len(online),
     )
+
+
+@router.post("", response_model=DeviceInfo)
+async def register_device(device: DeviceInfo) -> DeviceInfo:
+    """Register a device via HTTP (for testing/simulation)."""
+    from server.api.main import get_device_registry
+
+    registry = get_device_registry()
+    await registry.register_device(device)
+    return device
+
+
+@router.post("/{device_id}/heartbeat")
+async def device_heartbeat(device_id: str, heartbeat: Heartbeat) -> dict[str, str]:
+    """Send device heartbeat via HTTP (for testing/simulation)."""
+    from server.api.main import get_device_registry
+
+    registry = get_device_registry()
+    await registry.update_heartbeat(
+        device_id=heartbeat.device_id,
+        uptime_ms=heartbeat.uptime_ms,
+        load=heartbeat.load,
+        memory_free=heartbeat.memory_free,
+    )
+    return {"status": "ok"}
 
 
 @router.get("/{device_id}", response_model=DeviceDetailResponse)

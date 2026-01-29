@@ -3,22 +3,22 @@
 ## Quick Start
 
 ```bash
-pip install httpx websockets
+pip install httpx
 python scripts/test_device.py
 ```
 
-This creates a **fake device** (`fake-device-01`) that sends synthetic sensor data to `herd.neevs.io`.
+Creates a **fake device** that registers via HTTP API and sends heartbeats.
 
 ## What's Fake
 
-| Component | Real | Fake |
-|-----------|------|------|
-| Server (herd.neevs.io) | Yes | - |
-| Dashboard UI | Yes | - |
-| API endpoints | Yes | - |
-| Device (`fake-device-01`) | - | Yes |
-| Sensor readings | - | Yes (random temperature/battery) |
-| WebSocket connection | Yes | - |
+| Component | Status |
+|-----------|--------|
+| Server (herd.neevs.io) | Real |
+| Dashboard UI | Real |
+| API endpoints | Real |
+| `fake-device-01` | **FAKE** |
+| Sensor readings | **FAKE** (random temperature) |
+| Heartbeats | **FAKE** (simulated uptime) |
 
 ## Options
 
@@ -32,10 +32,10 @@ python scripts/test_device.py --url http://localhost:8000
 
 ## Verify
 
-1. Open https://herd.neevs.io
-2. Run `python scripts/test_device.py`
-3. Dashboard should show `fake-device-01` with live telemetry
+1. Run `python scripts/test_device.py`
+2. Open https://herd.neevs.io
+3. Dashboard shows `fake-device-01` as online
 
 ## Cleanup
 
-Stop the script (Ctrl+C). Fake devices disappear after heartbeat timeout (~6s).
+Stop the script (Ctrl+C). Device goes offline after ~6s (heartbeat timeout).
