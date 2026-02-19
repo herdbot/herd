@@ -1,19 +1,23 @@
-## Code
+# Herd
 
-- Delete unused code (imports, variables, functions, props, files)
-- No abstractions for single use
-- No handling for impossible errors
-- Minimal and direct solutions
-- No hardcoded fallbacks; fail explicitly if config/data is missing
-- Consolidate duplicate code immediately
-- Replace multiple similar functions with configuration objects
-- Remove trailing whitespace and excess blank lines
-- Prefer direct solutions over complex patterns
-- Simplify conditional logic where possible
-- After making significant code changes, run @agent-code-simplifier:code-simplifier to identify and remove cruft
+Multi-robot management server. FastAPI + WebSocket device communication. Python.
 
-## Documentation
+## Commands
 
-- Professional, concise, no decorative emojis
-- Unicode symbols (✓, ⚠️, ❌, ○) are fine for status indicators
-- Only docs integral to system
+- `make server` — start API server (port 8080, hot reload)
+- `make test` — pytest
+- `make check` — lint + type-check + test
+- `make lint` / `make lint-fix` — ruff
+- `make format` — ruff format
+- `make simulate` — launch a simulated robot
+- `make simulate-multi` — launch 3 simulated robots
+- `make setup` — first-time setup (.env + dev deps)
+
+## Architecture
+
+`server/api/` — FastAPI HTTP endpoints
+`server/simulation/` — simulated robot processes
+`shared/` — types and utilities shared between server and clients
+`clients/` — client implementations
+`examples/` — runnable demos
+`tests/` — pytest suite
